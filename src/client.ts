@@ -142,7 +142,10 @@ export class ShoptetClient {
       const paginator = dataNode?.paginator ?? (res.data as any)?.data?.paginator;
       const pageCount = paginator?.pageCount ?? paginator?.totalPages;
       if (pageCount && page >= pageCount) break;
-      if (items.length < perPage) break;
+      // Servers may cap itemsPerPage below what we requested. Trust the
+      // server's reported page size, not our request, when deciding to stop.
+      const serverPerPage = Number(paginator?.itemsPerPage ?? paginator?.itemsOnPage ?? perPage);
+      if (!pageCount && items.length < serverPerPage) break;
 
       page++;
     }

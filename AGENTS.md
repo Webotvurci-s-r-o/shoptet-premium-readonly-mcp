@@ -13,7 +13,7 @@ A **read-only** Model Context Protocol (MCP) server for the **Shoptet Premium** 
 - Language: TypeScript, ESM, Node ≥ 20
 - MCP transport: stdio
 - Auth: single header token `Shoptet-Private-API-Token`
-- Source of truth for API field names: `scripts/discover.mjs` (probes the live API and prints real shapes)
+- Source of truth for API field names: probe the live API with `curl` (see "Common modifications" below). Never trust the OpenAPI spec summary alone — Shoptet's nested shapes differ from typical REST conventions.
 
 ## Repo layout
 
@@ -29,10 +29,10 @@ src/
                               unpaid_orders
     products.ts     3 tools: list_products, get_product, inventory_overview
     customers.ts    2 tools: list_customers, get_customer
-    invoices.ts    2 tools: list_invoices, get_invoice
+    invoices.ts     2 tools: list_invoices, get_invoice
+    reviews.ts      2 tools: list_product_reviews, reviews_summary
     lookups.ts     14 tools: 12 code-lists + eshop_info + shoptet_raw_get
 scripts/
-  discover.mjs      probe lookup endpoints, print shapes
   e2e.mjs           spawn server, run full JSON-RPC handshake, call every tool
 dist/               build output (gitignored)
 .env.local          token storage (gitignored)
@@ -103,10 +103,10 @@ This spawns the server, runs the full MCP JSON-RPC handshake, and calls every re
 
 1. Read the failure message printed under `Failures:`.
 2. Open the corresponding tool file under `src/tools/` and inspect the field paths.
-3. Use `scripts/discover.mjs` (or a direct `curl`) to confirm the real response shape:
+3. Confirm the real response shape with a direct `curl`:
    ```bash
-   set -a; source .env.local; set +a
-   node scripts/discover.mjs
+   TOKEN=$(grep SHOPTET_PRIVATE_API_TOKEN .env.local | cut -d= -f2)
+   curl -s -H "Shoptet-Private-API-Token: $TOKEN" "https://api.myshoptet.com/api/<endpoint>" | python3 -m json.tool | head -80
    ```
 4. Edit `src/tools/shape.ts` (slimmer) or the specific tool file, rebuild (`npm run build`), and re-run the e2e until it passes.
 
@@ -176,9 +176,6 @@ If the user asks you to add a new tool or fix a broken one:
 ## Useful one-liners
 
 ```bash
-# Re-run discovery against the live shop
-set -a; source .env.local; set +a; node scripts/discover.mjs
-
 # Type-check without building
 npm run typecheck
 

@@ -109,6 +109,8 @@ async function main() {
     ["inventory_overview", { low_stock_threshold: 2, max_products: 100 }],
     ["list_customers", { limit: 5 }],
     ["list_invoices", { date_from: yrStart, date_to: today, limit: 20 }],
+    ["list_product_reviews", { limit: 100 }],
+    ["reviews_summary", { group_by_product: true, limit: 1000 }],
     ["shoptet_raw_get", { path: "/api/eshop/customer-fields" }],
   ];
 

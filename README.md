@@ -142,6 +142,7 @@ The server speaks the standard MCP JSON-RPC protocol over stdio. Run `node dist/
 | `top_customers` | Top customers by total spend or order count. |
 | `unpaid_orders` | List orders flagged unpaid (open receivables). |
 | `inventory_overview` | **Variants** at or below a stock threshold. Walks products and reads variant stock from detail — cap with `max_products`. |
+| `reviews_summary` | Per-product rating aggregates: count, avg, distribution 1–5★, positive/neutral/negative buckets, % with text, merchant-reaction rate. |
 
 ### Lists & details
 
@@ -151,6 +152,7 @@ The server speaks the standard MCP JSON-RPC protocol over stdio. Run `node dist/
 | `list_products` / `get_product` | Filterable product list (category, brand, visibility, type, availability) + single-product detail. |
 | `list_customers` / `get_customer` | Customer list (by email/phone) + single-customer detail. |
 | `list_invoices` / `get_invoice` | Invoice list (date range, validity, order code, var symbol) + single-invoice detail. |
+| `list_product_reviews` | Filterable list of product reviews (by product GUID, order code, date range). Includes review text for sentiment analysis. |
 
 ### Code lists
 
