@@ -111,6 +111,14 @@ async function main() {
     ["list_invoices", { date_from: yrStart, date_to: today, limit: 20 }],
     ["list_product_reviews", { limit: 100 }],
     ["reviews_summary", { group_by_product: true, limit: 1000 }],
+    ["list_project_reviews", { limit: 100 }],
+    ["list_stock_movements", { stock_id: 1, limit: 50 }],
+    ["stock_movements_summary", { stock_id: 1, group_by: "month", limit: 2000 }],
+    ["list_credit_notes", { date_from: yrStart, date_to: today, limit: 50 }],
+    ["refunds_summary", { date_from: yrStart, date_to: today, group_by: "month" }],
+    ["list_order_claims", { include_closed_and_cancelled: true, limit: 50 }],
+    ["list_discount_coupons", { limit: 50 }],
+    ["list_discussions", { limit: 50 }],
     ["shoptet_raw_get", { path: "/api/eshop/customer-fields" }],
   ];
 

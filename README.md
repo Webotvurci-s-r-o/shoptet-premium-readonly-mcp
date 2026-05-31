@@ -143,6 +143,8 @@ The server speaks the standard MCP JSON-RPC protocol over stdio. Run `node dist/
 | `unpaid_orders` | List orders flagged unpaid (open receivables). |
 | `inventory_overview` | **Variants** at or below a stock threshold. Walks products and reads variant stock from detail — cap with `max_products`. |
 | `reviews_summary` | Per-product rating aggregates: count, avg, distribution 1–5★, positive/neutral/negative buckets, % with text, merchant-reaction rate. |
+| `stock_movements_summary` | Aggregate stock movements by day/week/month/direction/product — inventory turnover, throughput, net flow per period. |
+| `refunds_summary` | Aggregate credit notes (refunds) by month/week/day — total refund value, count, refund rate. |
 
 ### Lists & details
 
@@ -152,7 +154,12 @@ The server speaks the standard MCP JSON-RPC protocol over stdio. Run `node dist/
 | `list_products` / `get_product` | Filterable product list (category, brand, visibility, type, availability) + single-product detail. |
 | `list_customers` / `get_customer` | Customer list (by email/phone) + single-customer detail. |
 | `list_invoices` / `get_invoice` | Invoice list (date range, validity, order code, var symbol) + single-invoice detail. |
-| `list_product_reviews` | Filterable list of product reviews (by product GUID, order code, date range). Includes review text for sentiment analysis. |
+| `list_product_reviews` / `list_project_reviews` | Product reviews (by GUID, order, date range) and store-level reviews. Both surface text for sentiment analysis. |
+| `list_stock_movements` | Individual stock movements (in/out) for a warehouse, with product code, delta, post-change amount, timestamp. |
+| `list_credit_notes` | Credit notes (refunds) with filter by date / source invoice. Totals are negative. |
+| `list_order_claims` | Orders with open product claims (reklamace). Filter by product / order code. |
+| `list_discount_coupons` | Configured coupons with type, value, validity, and usage count. |
+| `list_discussions` | Product Q&A posts — author, title, body, product reference. |
 
 ### Code lists
 

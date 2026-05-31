@@ -8,7 +8,7 @@ If you are a human reading this, the friendly version is [README.md](README.md).
 
 ## What this repo is
 
-A **read-only** Model Context Protocol (MCP) server for the **Shoptet Premium** REST API (`https://api.myshoptet.com`). Exposes 28 tools that let an LLM analyse a Shoptet e-shop's orders, products, customers, and invoices. Hard read-only — no write endpoints exist in the client code.
+A **read-only** Model Context Protocol (MCP) server for the **Shoptet Premium** REST API (`https://api.myshoptet.com`). Exposes 38 tools that let an LLM analyse a Shoptet e-shop's orders, products, customers, invoices, reviews, stock movements, refunds, coupons, and discussions. Hard read-only — no write endpoints exist in the client code.
 
 - Language: TypeScript, ESM, Node ≥ 20
 - MCP transport: stdio
@@ -24,13 +24,17 @@ src/
   util.ts           date bucketing, number parsing
   tools/
     shape.ts        slim projections of orders/products/customers/invoices
-    orders.ts       7 tools: list_orders, get_order, orders_summary,
+    orders.ts       8 tools: list_orders, get_order, orders_summary,
                               revenue_trend, top_products, top_customers,
-                              unpaid_orders
+                              unpaid_orders, list_order_claims
     products.ts     3 tools: list_products, get_product, inventory_overview
     customers.ts    2 tools: list_customers, get_customer
     invoices.ts     2 tools: list_invoices, get_invoice
-    reviews.ts      2 tools: list_product_reviews, reviews_summary
+    reviews.ts      3 tools: list_product_reviews, reviews_summary,
+                              list_project_reviews
+    stocks.ts       2 tools: list_stock_movements, stock_movements_summary
+    finance.ts      2 tools: list_credit_notes, refunds_summary
+    marketing.ts    2 tools: list_discount_coupons, list_discussions
     lookups.ts     14 tools: 12 code-lists + eshop_info + shoptet_raw_get
 scripts/
   e2e.mjs           spawn server, run full JSON-RPC handshake, call every tool
@@ -99,7 +103,7 @@ node scripts/e2e.mjs
 
 This spawns the server, runs the full MCP JSON-RPC handshake, and calls every registered tool with sensible defaults.
 
-**Gate:** the last summary line must read exactly `Results: 27 pass / 0 fail`. If any tool fails:
+**Gate:** the last summary line must read exactly `Results: 37 pass / 0 fail`. If any tool fails:
 
 1. Read the failure message printed under `Failures:`.
 2. Open the corresponding tool file under `src/tools/` and inspect the field paths.

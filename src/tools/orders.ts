@@ -352,4 +352,36 @@ export function registerOrderTools(server: McpServer, client: ShoptetClient) {
       });
     },
   );
+
+  server.registerTool(
+    "list_order_claims",
+    {
+      title: "List order claims (reklamace)",
+      description:
+        "List orders that have an open product claim/return. Useful for quality and return-rate analytics. Filter by product code or order code; toggle whether to include closed/cancelled orders.",
+      inputSchema: {
+        product_code: z.string().optional(),
+        order_code: z.string().optional(),
+        include_closed_and_cancelled: z.boolean().default(false),
+        limit: z.number().int().min(1).max(2000).default(500),
+      },
+    },
+    async (args) => {
+      const { items, truncated, pagesFetched } = await client.getAll<any>(
+        "/api/orders/claims",
+        {
+          productCode: args.product_code,
+          orderCode: args.order_code,
+          includeClosedAndCancelledOrders: args.include_closed_and_cancelled,
+        },
+        { limit: args.limit },
+      );
+      return asJsonContent({
+        count: items.length,
+        truncated,
+        pagesFetched,
+        claims: items,
+      });
+    },
+  );
 }

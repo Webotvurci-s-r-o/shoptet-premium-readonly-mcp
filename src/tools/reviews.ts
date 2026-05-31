@@ -169,4 +169,42 @@ export function registerReviewTools(server: McpServer, client: ShoptetClient) {
       });
     },
   );
+
+  server.registerTool(
+    "list_project_reviews",
+    {
+      title: "List store / project reviews",
+      description:
+        "List store-level reviews (about the e-shop as a whole, not individual products). Each review has rating, text, author, and any merchant reaction. Companion to list_product_reviews.",
+      inputSchema: {
+        limit: z.number().int().min(1).max(5000).default(500),
+      },
+    },
+    async (args) => {
+      const { items, truncated, pagesFetched } = await client.getAll<any>(
+        "/api/reviews/project",
+        {},
+        { limit: args.limit },
+      );
+      const slim = items.map(slimReview);
+      const counts = { positive: 0, neutral: 0, negative: 0 };
+      let sum = 0;
+      for (const r of slim) {
+        sum += r.rating;
+        if (r.rating >= 4) counts.positive++;
+        else if (r.rating === 3) counts.neutral++;
+        else if (r.rating >= 1) counts.negative++;
+      }
+      return asJsonContent({
+        count: slim.length,
+        truncated,
+        pagesFetched,
+        avg_rating: slim.length ? Math.round((sum / slim.length) * 100) / 100 : 0,
+        positive: counts.positive,
+        neutral: counts.neutral,
+        negative: counts.negative,
+        reviews: slim,
+      });
+    },
+  );
 }

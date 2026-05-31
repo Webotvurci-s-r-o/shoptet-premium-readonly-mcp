@@ -8,6 +8,9 @@ import { registerCustomerTools } from "./tools/customers.js";
 import { registerInvoiceTools } from "./tools/invoices.js";
 import { registerLookupTools } from "./tools/lookups.js";
 import { registerReviewTools } from "./tools/reviews.js";
+import { registerStockTools } from "./tools/stocks.js";
+import { registerFinanceTools } from "./tools/finance.js";
+import { registerMarketingTools } from "./tools/marketing.js";
 
 async function main() {
   const token = process.env.SHOPTET_PRIVATE_API_TOKEN;
@@ -46,6 +49,9 @@ async function main() {
   registerCustomerTools(server, client);
   registerInvoiceTools(server, client);
   registerReviewTools(server, client);
+  registerStockTools(server, client);
+  registerFinanceTools(server, client);
+  registerMarketingTools(server, client);
   registerLookupTools(server, client);
 
   const transport = new StdioServerTransport();
