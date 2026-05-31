@@ -160,6 +160,9 @@ The server speaks the standard MCP JSON-RPC protocol over stdio. Run `node dist/
 | `list_order_claims` | Orders with open product claims (reklamace). Filter by product / order code. |
 | `list_discount_coupons` | Configured coupons with type, value, validity, and usage count. |
 | `list_discussions` | Product Q&A posts — author, title, body, product reference. |
+| `list_articles` / `get_article` | Blog/news articles + single-article detail (HTML body). |
+| `list_article_sections` / `get_article_section` | Blog sections (categories). |
+| `list_pages` / `get_page` | Static pages (landing, about-us, etc) + single-page detail (HTML body). |
 
 ### Code lists
 

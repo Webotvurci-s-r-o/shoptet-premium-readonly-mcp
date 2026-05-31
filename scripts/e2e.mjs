@@ -119,6 +119,9 @@ async function main() {
     ["list_order_claims", { include_closed_and_cancelled: true, limit: 50 }],
     ["list_discount_coupons", { limit: 50 }],
     ["list_discussions", { limit: 50 }],
+    ["list_articles", { limit: 50 }],
+    ["list_article_sections", {}],
+    ["list_pages", { limit: 50 }],
     ["shoptet_raw_get", { path: "/api/eshop/customer-fields" }],
   ];
 
