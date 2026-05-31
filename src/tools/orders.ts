@@ -248,18 +248,19 @@ export function registerOrderTools(server: McpServer, client: ShoptetClient) {
       const agg = new Map<string, Agg>();
 
       for (const o of orderList) {
-        const code = o.code;
+        const code = o?.code;
         if (!code) continue;
         try {
           const detail = await client.get<any>(`/api/orders/${encodeURIComponent(code)}`);
           const order = detail.data?.data?.order ?? detail.data?.data ?? detail.data;
-          const items = order?.items ?? order?.orderItems ?? [];
+          const items = Array.isArray(order?.items) ? order.items : [];
           for (const it of items) {
-            const itemCode = it?.code ?? it?.itemCode ?? it?.productCode ?? "unknown";
-            const name = it?.name ?? it?.itemName ?? it?.productName;
-            const qty = Number(it?.amount ?? it?.quantity ?? 0);
+            if (it?.itemType && it.itemType !== "product") continue;
+            const itemCode = it?.code ?? it?.productCode ?? "unknown";
+            const name = it?.name;
+            const qty = Number(it?.amount ?? 0);
             const lineRevenue = Number(
-              it?.itemPrice?.toPay ?? it?.itemPrice?.priceWithVat ?? it?.priceWithVat ?? it?.totalPrice ?? 0,
+              it?.itemPrice?.withVat ?? it?.itemPrice?.priceWithVat ?? it?.priceWithVat ?? 0,
             );
             const cur = agg.get(itemCode) ?? { code: itemCode, name, qty: 0, revenue: 0 };
             cur.qty += qty;
@@ -331,7 +332,8 @@ export function registerOrderTools(server: McpServer, client: ShoptetClient) {
     "unpaid_orders",
     {
       title: "List unpaid orders",
-      description: "List orders flagged as unpaid (open receivables) in an optional date range.",
+      description:
+        "List orders not flagged as paid (paid != true) in an optional date range. Useful for open receivables overview.",
       inputSchema: {
         date_from: dateField,
         date_to: dateField,
@@ -341,7 +343,7 @@ export function registerOrderTools(server: McpServer, client: ShoptetClient) {
     async (args) => {
       const query = buildOrderQuery({ ...args });
       const { items, truncated } = await client.getAll<any>("/api/orders", query, { limit: args.limit });
-      const slim: SlimOrder[] = items.map(slimOrder).filter((o) => o.paid === false);
+      const slim: SlimOrder[] = items.map(slimOrder).filter((o) => o.paid !== true);
       return asJsonContent({
         count: slim.length,
         truncated_input: truncated,

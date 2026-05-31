@@ -1,10 +1,7 @@
 /**
- * Helpers for turning Shoptet's verbose JSON into compact, analytics-friendly
- * shapes. Shoptet endpoints typically wrap results in
- *   { data: { <collection>: [...], paginator: {...} } }
- *
- * These helpers project only the fields the LLM is likely to use, keeping
- * tool outputs small enough to fit useful context.
+ * Slimmers that project Shoptet's verbose JSON down to analytics-friendly
+ * shapes. Field paths here are based on what the real Premium API returns;
+ * see scripts/discover.mjs for the source of truth.
  */
 
 import { parseNumber } from "../util.js";
@@ -12,107 +9,124 @@ import { parseNumber } from "../util.js";
 export interface SlimOrder {
   code: string;
   creationTime?: string;
+  changeTime?: string;
   status?: string;
   statusId?: number;
-  paid?: boolean;
+  paid?: boolean | null;
   email?: string;
-  customerGuid?: string;
+  fullName?: string;
+  customerGuid?: string | null;
   source?: string;
+  sourceId?: number;
   paymentMethod?: string;
+  paymentMethodGuid?: string;
   shippingMethod?: string;
+  shippingGuid?: string;
   currency?: string;
   priceWithVat: number;
   priceWithoutVat: number;
+  toPay: number;
 }
 
 export function slimOrder(raw: any): SlimOrder {
+  const p = raw?.price ?? {};
   return {
     code: raw?.code,
     creationTime: raw?.creationTime,
-    status: raw?.status,
-    statusId: raw?.statusId,
+    changeTime: raw?.changeTime,
+    status: raw?.status?.name,
+    statusId: raw?.status?.id,
     paid: raw?.paid,
     email: raw?.email,
+    fullName: raw?.fullName,
     customerGuid: raw?.customerGuid,
-    source: raw?.source,
-    paymentMethod: raw?.paymentMethod?.title ?? raw?.paymentMethod?.name ?? raw?.paymentMethodName,
-    shippingMethod: raw?.shippingMethod?.title ?? raw?.shippingMethod?.name ?? raw?.shippingName,
-    currency: raw?.priceElements?.currencyCode ?? raw?.currencyCode ?? raw?.currency,
-    priceWithVat: parseNumber(
-      raw?.priceElements?.toPay ??
-        raw?.priceWithVat ??
-        raw?.priceToPay ??
-        raw?.price ??
-        0,
-    ),
-    priceWithoutVat: parseNumber(raw?.priceWithoutVat ?? raw?.priceElements?.priceWithoutVat ?? 0),
+    source: raw?.source?.name,
+    sourceId: raw?.source?.id,
+    paymentMethod: raw?.paymentMethod?.name,
+    paymentMethodGuid: raw?.paymentMethod?.guid,
+    shippingMethod: raw?.shipping?.name,
+    shippingGuid: raw?.shipping?.guid,
+    currency: p?.currencyCode,
+    priceWithVat: parseNumber(p?.withVat),
+    priceWithoutVat: parseNumber(p?.withoutVat),
+    toPay: parseNumber(p?.toPay),
   };
 }
 
 export interface SlimProduct {
-  code?: string;
   guid?: string;
+  code?: string;
   name?: string;
   brand?: string;
+  brandCode?: string;
   visibility?: string;
   type?: string;
   defaultCategoryGuid?: string;
   defaultCategoryName?: string;
+  variantCount?: number;
   price?: number;
-  priceWithVat?: number;
   vatRate?: number;
   currency?: string;
   stockAmount?: number;
   unit?: string;
   availability?: string;
+  url?: string;
 }
 
+/**
+ * Lists return product metadata only; variant-level data (code/price/stock)
+ * is exposed via product detail. We pull the first variant when present.
+ */
 export function slimProduct(raw: any): SlimProduct {
-  const def = raw?.defaultPrice ?? raw?.price ?? {};
+  const variants = Array.isArray(raw?.variants) ? raw.variants : [];
+  const v = variants[0] ?? {};
   return {
-    code: raw?.code,
     guid: raw?.guid,
+    code: v?.code,
     name: raw?.name,
-    brand: raw?.brand?.name ?? raw?.brandName,
+    brand: raw?.brand?.name,
+    brandCode: raw?.brand?.code,
     visibility: raw?.visibility,
     type: raw?.type,
-    defaultCategoryGuid: raw?.defaultCategory?.guid ?? raw?.defaultCategoryGuid,
+    defaultCategoryGuid: raw?.defaultCategory?.guid,
     defaultCategoryName: raw?.defaultCategory?.name,
-    price: parseNumber(def?.price ?? def?.toPay ?? raw?.price),
-    priceWithVat: parseNumber(def?.priceWithVat ?? def?.toPay),
-    vatRate: parseNumber(def?.vatRate),
-    currency: def?.currencyCode ?? raw?.currencyCode,
-    stockAmount: raw?.stockAmount,
-    unit: raw?.unit,
-    availability: raw?.availability?.name ?? raw?.availability,
+    variantCount: variants.length || undefined,
+    price: v?.price !== undefined ? parseNumber(v.price) : undefined,
+    vatRate: v?.vatRate !== undefined ? parseNumber(v.vatRate) : undefined,
+    currency: v?.currencyCode,
+    stockAmount: v?.stock !== undefined ? parseNumber(v.stock) : undefined,
+    unit: v?.unit,
+    availability: v?.availability?.name ?? v?.availabilityWhenSoldOut?.name,
+    url: raw?.url,
   };
 }
 
 export interface SlimCustomer {
   guid?: string;
-  email?: string;
-  phone?: string;
   fullName?: string;
   company?: string;
-  group?: string;
   registered?: string;
-  newsletter?: boolean;
+  changed?: string;
+  adminUrl?: string;
+  email?: string;
+  phone?: string;
 }
 
+/**
+ * Customer list responses are intentionally thin (no email/phone). Detail
+ * endpoint returns contacts and billing/delivery addresses.
+ */
 export function slimCustomer(raw: any): SlimCustomer {
   const billing = raw?.billingAddress ?? {};
-  const fullName =
-    raw?.fullName ??
-    ([billing?.firstName, billing?.lastName].filter(Boolean).join(" ") || undefined);
   return {
     guid: raw?.guid,
+    fullName: raw?.billFullName || raw?.fullName,
+    company: raw?.billCompany || billing?.company,
+    registered: raw?.creationTime,
+    changed: raw?.changeTime,
+    adminUrl: raw?.adminUrl,
     email: raw?.email,
     phone: raw?.phone ?? billing?.phone,
-    fullName,
-    company: billing?.company,
-    group: raw?.group?.name ?? raw?.customerGroup,
-    registered: raw?.creationTime ?? raw?.registered,
-    newsletter: raw?.newsletter,
   };
 }
 
@@ -122,26 +136,34 @@ export interface SlimInvoice {
   creationTime?: string;
   taxDate?: string;
   dueDate?: string;
+  varSymbol?: string | number;
   isValid?: boolean;
-  isPaid?: boolean;
+  paid?: boolean;
+  fullName?: string;
+  company?: string;
   currency?: string;
   priceWithVat: number;
   priceWithoutVat: number;
+  toPay: number;
 }
 
 export function slimInvoice(raw: any): SlimInvoice {
-  const p = raw?.priceElements ?? raw?.price ?? {};
+  const p = raw?.price ?? {};
   return {
     code: raw?.code,
     orderCode: raw?.orderCode,
     creationTime: raw?.creationTime,
     taxDate: raw?.taxDate,
     dueDate: raw?.dueDate,
+    varSymbol: raw?.varSymbol,
     isValid: raw?.isValid,
-    isPaid: raw?.isPaid ?? raw?.paid,
-    currency: p?.currencyCode ?? raw?.currencyCode,
-    priceWithVat: parseNumber(p?.toPay ?? p?.priceWithVat ?? raw?.priceWithVat),
-    priceWithoutVat: parseNumber(p?.priceWithoutVat ?? raw?.priceWithoutVat),
+    paid: raw?.paid,
+    fullName: raw?.billFullName,
+    company: raw?.billCompany,
+    currency: p?.currencyCode,
+    priceWithVat: parseNumber(p?.withVat),
+    priceWithoutVat: parseNumber(p?.withoutVat),
+    toPay: parseNumber(p?.toPay),
   };
 }
 

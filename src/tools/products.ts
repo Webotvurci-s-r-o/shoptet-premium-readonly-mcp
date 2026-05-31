@@ -9,7 +9,8 @@ export function registerProductTools(server: McpServer, client: ShoptetClient) {
     "list_products",
     {
       title: "List products",
-      description: "List products with filters (category, brand, visibility, type, stock availability).",
+      description:
+        "List products with filters (category, brand, visibility, type, supplier, availability). Returns slim records — code, price, stock and unit come from the first variant. For products with multiple variants only the first one is shown; call get_product for full variant data.",
       inputSchema: {
         category_guid: z.string().optional(),
         brand_code: z.string().optional(),
@@ -79,12 +80,18 @@ export function registerProductTools(server: McpServer, client: ShoptetClient) {
     {
       title: "Inventory / low-stock overview",
       description:
-        "Scan products and list those at or below a stock threshold. Iterates /api/products list — narrow by category for big catalogs.",
+        "Scan products and list variants at or below a stock threshold. Iterates /api/products then fetches each product's detail to read variant stock — expensive on big catalogs, narrow by category/brand and tune max_products.",
       inputSchema: {
         low_stock_threshold: z.number().min(0).default(5),
         category_guid: z.string().optional(),
         brand_code: z.string().optional(),
-        max_products: z.number().int().min(1).max(5000).default(2000),
+        max_products: z
+          .number()
+          .int()
+          .min(1)
+          .max(2000)
+          .default(200)
+          .describe("Cap on number of product detail calls. 200 ≈ 200 API requests."),
       },
     },
     async (args) => {
@@ -93,16 +100,60 @@ export function registerProductTools(server: McpServer, client: ShoptetClient) {
         { categoryGuid: args.category_guid, brandCode: args.brand_code },
         { limit: args.max_products },
       );
-      const slim = items.map(slimProduct);
-      const low = slim
-        .filter((p) => typeof p.stockAmount === "number" && p.stockAmount <= args.low_stock_threshold)
-        .sort((a, b) => (a.stockAmount ?? 0) - (b.stockAmount ?? 0));
+
+      type LowVariant = {
+        product_guid?: string;
+        product_name?: string;
+        variant_code?: string;
+        ean?: string | null;
+        stock: number;
+        unit?: string;
+        price?: number;
+        currency?: string;
+        category?: string;
+        brand?: string;
+      };
+      const low: LowVariant[] = [];
+      let scanned = 0;
+
+      for (const p of items) {
+        const guid = p?.guid;
+        if (!guid) continue;
+        try {
+          const detail = await client.get<any>(`/api/products/${encodeURIComponent(guid)}`);
+          const prod = detail.data?.data ?? {};
+          const variants = Array.isArray(prod?.variants) ? prod.variants : [];
+          for (const v of variants) {
+            scanned++;
+            const stock = typeof v?.stock === "string" ? parseFloat(v.stock) : Number(v?.stock);
+            if (!Number.isFinite(stock)) continue;
+            if (stock > args.low_stock_threshold) continue;
+            low.push({
+              product_guid: guid,
+              product_name: prod?.name,
+              variant_code: v?.code,
+              ean: v?.ean,
+              stock,
+              unit: v?.unit,
+              price: v?.price !== undefined ? Number(v.price) : undefined,
+              currency: v?.currencyCode,
+              category: prod?.defaultCategory?.name,
+              brand: prod?.brand?.name,
+            });
+          }
+        } catch {
+          // skip unreadable product
+        }
+      }
+
+      low.sort((a, b) => a.stock - b.stock);
       return asJsonContent({
-        scanned: slim.length,
+        products_scanned: items.length,
+        variants_scanned: scanned,
         threshold: args.low_stock_threshold,
         below_threshold: low.length,
         truncated_input: truncated,
-        products: low,
+        variants: low,
       });
     },
   );

@@ -8,7 +8,8 @@ export function registerCustomerTools(server: McpServer, client: ShoptetClient) 
     "list_customers",
     {
       title: "List customers",
-      description: "List customers, optionally filtered by email or phone.",
+      description:
+        "List customers, optionally filtered by email or phone. NOTE: Shoptet's list view is intentionally thin — returned records contain only GUID, name, company, and timestamps. Call get_customer for email/phone/addresses.",
       inputSchema: {
         email: z.string().optional(),
         phone: z.string().optional(),

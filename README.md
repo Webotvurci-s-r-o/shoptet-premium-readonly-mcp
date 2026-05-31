@@ -60,7 +60,7 @@ Restart Claude Desktop.
 | `top_products` | Top-selling products by revenue or quantity in a date range. |
 | `top_customers` | Top customers by total spend or order count. |
 | `unpaid_orders` | List orders flagged unpaid (open receivables). |
-| `inventory_overview` | Products at or below a stock threshold. |
+| `inventory_overview` | **Variants** at or below a stock threshold. Walks products and reads variant stock from detail — cap with `max_products`. |
 
 ### Lists & details
 
@@ -89,6 +89,17 @@ Restart Claude Desktop.
 - *"Které produkty mají méně než 3 ks skladem v kategorii X?"*
 - *"Kdo jsou moji top 10 zákazníci podle obratu za letošní rok?"*
 - *"Porovnej tržby z 'Heuréka' vs 'Zboží.cz' vs e-shop za poslední měsíc."*
+
+## End-to-end test
+
+`scripts/e2e.mjs` spawns the built server, completes the MCP handshake, and calls every registered tool against the live shop. Run with the token in `.env.local`:
+
+```bash
+npm run build
+node scripts/e2e.mjs
+```
+
+Reports `<n> pass / <n> fail` per tool and prints sample outputs from `orders_summary` and `top_products`.
 
 ## Configuration
 
