@@ -12,42 +12,123 @@ Read-only MCP server for the **Shoptet Premium API**. Gives an LLM (Claude Deskt
 
 Rate limits (HTTP 429, `Retry-After`) are handled automatically with exponential backoff.
 
-## Setup
+## Installation
 
-### 1. Get a Shoptet Premium API token
+> Agents installing this for a user: follow [AGENTS.md](AGENTS.md) instead — it's the same steps but written deterministically so you can execute them without guessing.
 
-In Shoptet admin: **Propojení → Shoptet API → Private API token**. Copy the token.
+### Prerequisites
 
-### 2. Install & build
+| Requirement | Why |
+|---|---|
+| **Node.js ≥ 20** (`node --version`) | The server uses ESM + modern `undici`. Node 18 won't work. |
+| **A Shoptet Premium e-shop** | The private token only works on Premium plans. |
+| **macOS, Linux, or Windows (WSL)** | stdio MCP transport is cross-platform; Windows native should also work but is untested here. |
+| **A MCP-aware client** | Claude Desktop, Claude Code, or any client that speaks the MCP stdio protocol. |
+
+### Step 1 — Get a Shoptet Premium API token
+
+1. Log in to your Shoptet admin (`https://<your-eshop-id>.myshoptet.com/admin`).
+2. Navigate to **Propojení → Shoptet API** (English: **Connections → Shoptet API**).
+3. Under **Private API access**, click **Generate token** (or copy an existing one).
+4. The token looks like `123456-p-789012-abcdef1234567890abcdef`.
+
+Keep this token secret — anyone who has it can read every record in your shop.
+
+### Step 2 — Clone, install, build
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/<you>/shoptet-premium-readonly-mcp.git
 cd shoptet-premium-readonly-mcp
 npm install
 npm run build
 ```
 
-### 3. Hook it into Claude Desktop / Claude Code
+This produces `dist/index.js` — that's the file MCP clients will execute.
 
-**Claude Desktop** — edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
+### Step 3 — Verify the server boots
+
+```bash
+SHOPTET_PRIVATE_API_TOKEN="paste-your-token-here" node dist/index.js < /dev/null
+```
+
+You should see `[shoptet-mcp] ready on stdio` printed to stderr, then the process exits (because stdin closed). If you get `SHOPTET_PRIVATE_API_TOKEN env var is required`, the token wasn't picked up. If you get a `Cannot find module` error, run `npm install && npm run build` again.
+
+### Step 4 — Run the end-to-end test against your shop (optional but recommended)
+
+```bash
+echo "SHOPTET_PRIVATE_API_TOKEN=paste-your-token-here" > .env.local
+node scripts/e2e.mjs
+```
+
+Expected output: `Results: 27 pass / 0 fail`, followed by a sample `orders_summary` and `top_products` from your real data. If a tool fails here it'll also fail in Claude — fix it before wiring up the client.
+
+`.env.local` is gitignored — it will not be committed.
+
+### Step 5 — Hook it into your MCP client
+
+#### Option A — Claude Desktop
+
+Edit your config file:
+
+| OS | Path |
+|---|---|
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Linux | `~/.config/Claude/claude_desktop_config.json` |
+
+Add the `shoptet` entry inside `mcpServers` (create the file or the key if it doesn't exist):
 
 ```json
 {
   "mcpServers": {
     "shoptet": {
       "command": "node",
-      "args": ["/absolute/path/to/shoptet-premium-readonly-mcp/dist/index.js"],
+      "args": ["/ABSOLUTE/PATH/TO/shoptet-premium-readonly-mcp/dist/index.js"],
       "env": {
-        "SHOPTET_PRIVATE_API_TOKEN": "your-token-here"
+        "SHOPTET_PRIVATE_API_TOKEN": "paste-your-token-here"
       }
     }
   }
 }
 ```
 
-Restart Claude Desktop.
+Replace `/ABSOLUTE/PATH/TO/...` with the real absolute path. Get it by running `pwd` inside the project directory.
 
-**Claude Code** — `claude mcp add shoptet -e SHOPTET_PRIVATE_API_TOKEN=your-token -- node /absolute/path/to/dist/index.js`
+Restart Claude Desktop fully (`Cmd-Q` on macOS, then reopen — closing the window is not enough). Open a new chat — you should see "shoptet" listed under the tools/plug icon in the input area.
+
+#### Option B — Claude Code (CLI)
+
+From the project directory:
+
+```bash
+claude mcp add shoptet \
+  -e SHOPTET_PRIVATE_API_TOKEN="paste-your-token-here" \
+  -- node "$(pwd)/dist/index.js"
+```
+
+Verify:
+
+```bash
+claude mcp list
+```
+
+You should see `shoptet` listed. Then start `claude` in any directory — the tools will be available.
+
+#### Option C — Any other MCP client
+
+The server speaks the standard MCP JSON-RPC protocol over stdio. Run `node dist/index.js` with `SHOPTET_PRIVATE_API_TOKEN` in the environment and connect your client to it.
+
+### Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| `SHOPTET_PRIVATE_API_TOKEN env var is required` | The token isn't being passed to the process. Check your client config's `env` block, or your shell. |
+| `Shoptet API 401` on every call | Token is invalid, expired, or copied with whitespace. Regenerate in the Shoptet admin. |
+| `Shoptet API 403` on specific endpoints | Some endpoints require additional permissions in `Propojení → Shoptet API`. Tick the relevant scopes. |
+| `Shoptet API 429` repeatedly | You're hitting rate limits. The server already backs off on `Retry-After`; reduce `max_orders` / `limit` in heavy tools (`top_products`, `inventory_overview`). |
+| Server boots but Claude doesn't see it | You edited the wrong config file, used a relative path in `args`, or didn't fully restart Claude. Use an **absolute** path in `args`. |
+| `Cannot find module '@modelcontextprotocol/sdk'` | Run `npm install` again. Don't ship the project without `node_modules` — or rebuild. |
+| Old data showing up | The server has no cache. If Claude shows stale numbers, that's the LLM caching its own conclusions — start a fresh chat. |
 
 ## Tools
 
