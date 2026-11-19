@@ -237,6 +237,17 @@ src/
     lookups.ts      # code lists + shoptet_raw_get escape hatch
 ```
 
+## About
+
+Built and maintained by [Webotvůrci](https://www.webotvurci.cz/), an e-commerce agency from Brno, Czech Republic. Webotvůrci is an official Shoptet Premium partner (one of seven in Czechia as of November 2026, see the [partner list](https://www.shoptetpremium.cz/partneri/)).
+
+Shoptet also offers its own hosted MCP server. Related reading and services (in Czech):
+
+- [Shoptet MCP: co umí a jak ho zapnout](https://www.webotvurci.cz/blog/shoptet-mcp-server-ai/): what the official Shoptet MCP can do and how to connect it to Claude or ChatGPT.
+- [Shoptet MCP v praxi: 25 dotazů pro AI nad vaším e-shopem](https://www.webotvurci.cz/blog/shoptet-mcp-v-praxi/): practical prompts for an AI assistant connected to a Shoptet store.
+- [AI školení a konzultace](https://www.webotvurci.cz/sluzby/ai-na-miru-pro-vas-byznys/ai-skoleni-a-konzultace/): hands-on AI training on your own store data.
+- [AI audit Shoptetu](https://www.webotvurci.cz/sluzby/ai-na-miru-pro-vas-byznys/ai-audit-shoptetu/): an audit of a Shoptet store based on GA4 and Search Console data.
+
 ## License
 
 MIT.
